@@ -43,10 +43,11 @@ import com.idevicesinc.sweetblue.BleDeviceState;
 import com.idevicesinc.sweetblue.BleManager.DiscoveryListener;
 import com.idevicesinc.sweetblue.BleManager;
 import com.idevicesinc.sweetblue.BleManagerConfig.ScanFilter;
+import com.idevicesinc.sweetblue.BleManagerState;
 
 class RNBLEModule extends ReactContextBaseJavaModule {
   private Context context;
-  private BluetoothAdapter bluetoothAdapter;
+  private BleManager bleManager;
 
   public RNBLEModule(ReactApplicationContext reactContext) {
     super(reactContext);
@@ -56,7 +57,7 @@ class RNBLEModule extends ReactContextBaseJavaModule {
   @Override
   public void initialize() {
     super.initialize();
-    Log.i("", "RNSweetBlue initialized");
+    this.bleManager = BleManager.get(this.context);
   }
 
   /**
@@ -71,11 +72,7 @@ class RNBLEModule extends ReactContextBaseJavaModule {
   @ReactMethod
   public void getState() {
     WritableMap params = Arguments.createMap();
-    if (bluetoothAdapter == null) {
-      params.putString("state", "unsupported");
-    } else {
-      params.putString("state", stateToString(bluetoothAdapter.getState()));
-    }
+    params.putString("state", getStringState());
     sendEvent("ble.stateChange", params);
   }
 
@@ -129,18 +126,17 @@ class RNBLEModule extends ReactContextBaseJavaModule {
       .emit(eventName, params);
   }
 
-  private String stateToString(int state){
-    switch (state) {
-      case BluetoothAdapter.STATE_OFF:
-        return "poweredOff";
-      case BluetoothAdapter.STATE_TURNING_OFF:
-        return "turningOff";
-      case BluetoothAdapter.STATE_ON:
-        return "poweredOn";
-      case BluetoothAdapter.STATE_TURNING_ON:
-        return "turningOn";
-      default:
-        return "unknown";
+  private String getStringState() {
+    if (bleManager.isAny(BleManagerState.OFF)) {
+      return "poweredOff";
+    } else if (bleManager.isAny(BleManagerState.TURNING_OFF)) {
+      return "turningOff";
+    } else if (bleManager.isAny(BleManagerState.ON)) {
+      return "poweredOn";
+    } else if (bleManager.isAny(BleManagerState.TURNING_ON)) {
+      return "turningOn";
+    } else {
+      return "unknown";
     }
   }
 }
