@@ -35,6 +35,7 @@ import com.facebook.react.bridge.Arguments;
 import com.facebook.react.bridge.ReactApplicationContext;
 import com.facebook.react.bridge.ReactContextBaseJavaModule;
 import com.facebook.react.bridge.ReactMethod;
+import com.facebook.react.bridge.ReadableArray;
 import com.facebook.react.bridge.WritableMap;
 import com.facebook.react.modules.core.DeviceEventManagerModule;
 
@@ -77,7 +78,7 @@ class RNBLEModule extends ReactContextBaseJavaModule {
   }
 
   @ReactMethod
-  public void startScanning() {
+  public void startScanning(ReadableArray _serviceUuids, Boolean _allowDuplicates) {
     final ScanFilter scanFilter = new ScanFilter()
     {
         @Override public Please onEvent(ScanEvent e)
@@ -87,12 +88,8 @@ class RNBLEModule extends ReactContextBaseJavaModule {
         }
     };
 
-    Log.i("", "BLEBLE onCreate");
+    Log.i("", "BLEBLE startScanning");
 
-    // New BleDevice instances are provided through this listener.
-    // Nested listeners then listen for connection and read results.
-    // Obviously you will want to structure your actual code a little better.
-    // The deep nesting simply demonstrates the async-callback-based nature of the API.
     final DiscoveryListener discoveryListener = new DiscoveryListener()
     {
       @Override public void onEvent(DiscoveryEvent e)
@@ -116,8 +113,10 @@ class RNBLEModule extends ReactContextBaseJavaModule {
       }
     };
 
-    BleManager bleManager = BleManager.get(this.context);
     bleManager.startScan(scanFilter, discoveryListener);
+
+    //TODO - trigger this "for real"
+    // this.sendEvent("ble.discover", params);
   }
 
   private void sendEvent(String eventName, WritableMap params) {
