@@ -27,9 +27,11 @@ SOFTWARE.
 
 package com.geniem.rnble;
 
+import android.bluetooth.BluetoothAdapter;
 import android.content.Context;
 import android.util.Log;
 
+import com.facebook.react.bridge.Arguments;
 import com.facebook.react.bridge.ReactApplicationContext;
 import com.facebook.react.bridge.ReactContextBaseJavaModule;
 import com.facebook.react.bridge.ReactMethod;
@@ -40,12 +42,11 @@ import com.idevicesinc.sweetblue.BleDevice;
 import com.idevicesinc.sweetblue.BleDeviceState;
 import com.idevicesinc.sweetblue.BleManager.DiscoveryListener;
 import com.idevicesinc.sweetblue.BleManager;
-// import com.idevicesinc.sweetblue.utils.BluetoothEnabler;
-// import com.idevicesinc.sweetblue.utils.BluetoothEnabler.DefaultBluetoothEnablerFilter;
 import com.idevicesinc.sweetblue.BleManagerConfig.ScanFilter;
 
 class RNBLEModule extends ReactContextBaseJavaModule {
   private Context context;
+  private BluetoothAdapter bluetoothAdapter;
 
   public RNBLEModule(ReactApplicationContext reactContext) {
     super(reactContext);
@@ -73,7 +74,7 @@ class RNBLEModule extends ReactContextBaseJavaModule {
     if (bluetoothAdapter == null) {
       params.putString("state", "unsupported");
     } else {
-      params.putString("state",stateToString(bluetoothAdapter.getState()));            
+      params.putString("state", stateToString(bluetoothAdapter.getState()));
     }
     sendEvent("ble.stateChange", params);
   }
@@ -126,6 +127,21 @@ class RNBLEModule extends ReactContextBaseJavaModule {
     getReactApplicationContext()
       .getJSModule(DeviceEventManagerModule.RCTDeviceEventEmitter.class)
       .emit(eventName, params);
+  }
+
+  private String stateToString(int state){
+    switch (state) {
+      case BluetoothAdapter.STATE_OFF:
+        return "poweredOff";
+      case BluetoothAdapter.STATE_TURNING_OFF:
+        return "turningOff";
+      case BluetoothAdapter.STATE_ON:
+        return "poweredOn";
+      case BluetoothAdapter.STATE_TURNING_ON:
+        return "turningOn";
+      default:
+        return "unknown";
+    }
   }
 }
 
