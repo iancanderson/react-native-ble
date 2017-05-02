@@ -27,7 +27,10 @@ SOFTWARE.
 
 package com.geniem.rnble;
 
-import android.bluetooth.BluetoothAdapter;
+import java.util.List;
+import java.util.UUID;
+
+import android.bluetooth.BluetoothGattCharacteristic;
 import android.content.Context;
 import android.util.Log;
 
@@ -36,6 +39,7 @@ import com.facebook.react.bridge.ReactApplicationContext;
 import com.facebook.react.bridge.ReactContextBaseJavaModule;
 import com.facebook.react.bridge.ReactMethod;
 import com.facebook.react.bridge.ReadableArray;
+import com.facebook.react.bridge.WritableArray;
 import com.facebook.react.bridge.WritableMap;
 import com.facebook.react.modules.core.DeviceEventManagerModule;
 
@@ -119,6 +123,85 @@ class RNBLEModule extends ReactContextBaseJavaModule {
         }
       }
     });
+  }
+
+
+  @ReactMethod
+  public void discoverServices(final String peripheralUuid, ReadableArray _uuids){
+    BleDevice device = bleManager.getDevice(peripheralUuid);
+    WritableArray serviceUuids = Arguments.createArray();
+
+    for (UUID uuid : device.getAdvertisedServices()) {
+      serviceUuids.pushString(toNobleUuid(uuid.toString()));
+    }
+
+    WritableMap params = Arguments.createMap();
+    params.putString("peripheralUuid", peripheralUuid);
+    params.putArray("serviceUuids", serviceUuids);
+
+    sendEvent("ble.servicesDiscover", params);
+  }
+
+  @ReactMethod
+  public void discoverCharacteristics(final String peripheralUuid, final String serviceUuid, ReadableArray _characteristicUuids){
+    BleDevice device = bleManager.getDevice(peripheralUuid);
+    WritableArray requestedCharacteristics = Arguments.createArray();
+
+    List<BluetoothGattCharacteristic> nativeCharacteristics = device.getNativeCharacteristics_List();
+
+    for(BluetoothGattCharacteristic c : nativeCharacteristics) {
+      WritableArray properties = Arguments.createArray();
+      int propertyBitmask = c.getProperties();
+
+      if((propertyBitmask & BluetoothGattCharacteristic.PROPERTY_BROADCAST) != 0){
+        properties.pushString("broadcast");
+      }
+
+      if((propertyBitmask & BluetoothGattCharacteristic.PROPERTY_READ) != 0){
+        properties.pushString("read");
+      }
+
+      if((propertyBitmask & BluetoothGattCharacteristic.PROPERTY_WRITE_NO_RESPONSE) != 0){
+        properties.pushString("writeWithoutResponse");
+      }
+
+      if((propertyBitmask & BluetoothGattCharacteristic.PROPERTY_WRITE) != 0){
+        properties.pushString("write");
+      }
+
+      if((propertyBitmask & BluetoothGattCharacteristic.PROPERTY_NOTIFY) != 0){
+        properties.pushString("notify");
+      }
+
+      if((propertyBitmask & BluetoothGattCharacteristic.PROPERTY_INDICATE) != 0){
+        properties.pushString("indicate");
+      }
+
+      if((propertyBitmask & BluetoothGattCharacteristic.PROPERTY_SIGNED_WRITE) != 0){
+        properties.pushString("authenticatedSignedWrites");
+      }
+
+      if((propertyBitmask & BluetoothGattCharacteristic.PROPERTY_EXTENDED_PROPS) != 0){
+        properties.pushString("extendedProperties");
+      }
+
+      WritableMap characteristicObject = Arguments.createMap();
+      characteristicObject.putArray("properties", properties);
+      characteristicObject.putString("uuid", toNobleUuid(c.getUuid().toString()));
+
+      requestedCharacteristics.pushMap(characteristicObject);
+    }
+
+    WritableMap params = Arguments.createMap();
+    params.putString("peripheralUuid", peripheralUuid);
+    params.putString("serviceUuid", toNobleUuid(serviceUuid));
+    params.putArray("characteristics", requestedCharacteristics);
+    this.sendEvent("ble.characteristicsDiscover", params);
+  }
+
+  private String toNobleUuid(String uuid) {
+    String result = uuid.replaceAll("[\\s\\-()]", "");
+    return result.toLowerCase();
   }
 
   private void sendDiscoveryEvent(BleDevice device) {
