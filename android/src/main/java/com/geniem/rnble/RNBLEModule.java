@@ -27,10 +27,13 @@ SOFTWARE.
 
 package com.geniem.rnble;
 
+import java.util.Arrays;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 
 import android.bluetooth.BluetoothGattCharacteristic;
+import android.bluetooth.BluetoothGattService;
 import android.content.Context;
 import android.util.Log;
 
@@ -64,6 +67,9 @@ class RNBLEModule extends ReactContextBaseJavaModule {
   public void initialize() {
     super.initialize();
     this.bleManager = BleManager.get(this.context);
+
+    // TEMPORARY
+    bleManager.disconnectAll();
   }
 
   /**
@@ -128,28 +134,40 @@ class RNBLEModule extends ReactContextBaseJavaModule {
 
   @ReactMethod
   public void discoverServices(final String peripheralUuid, ReadableArray _uuids){
+    Log.i("", "BLEBLE discoverServices");
+
     BleDevice device = bleManager.getDevice(peripheralUuid);
     WritableArray serviceUuids = Arguments.createArray();
 
-    for (UUID uuid : device.getAdvertisedServices()) {
-      serviceUuids.pushString(toNobleUuid(uuid.toString()));
+    Log.i("", "BLEBLE Looping over BluetoothGattService");
+
+    for(BluetoothGattService service : device.getNativeServices_List()){
+      String uuid = service.getUuid().toString();
+      serviceUuids.pushString(toNobleUuid(uuid));
     }
 
     WritableMap params = Arguments.createMap();
     params.putString("peripheralUuid", peripheralUuid);
     params.putArray("serviceUuids", serviceUuids);
 
-    sendEvent("ble.servicesDiscover", params);
+    Log.i("", "BLEBLE Sending servicesDiscover");
+
+    this.sendEvent("ble.servicesDiscover", params);
   }
 
   @ReactMethod
   public void discoverCharacteristics(final String peripheralUuid, final String serviceUuid, ReadableArray _characteristicUuids){
+    Log.i("", "BLEBLE discoverCharacteristics");
+
     BleDevice device = bleManager.getDevice(peripheralUuid);
     WritableArray requestedCharacteristics = Arguments.createArray();
 
     List<BluetoothGattCharacteristic> nativeCharacteristics = device.getNativeCharacteristics_List();
+    Log.i("", String.format("Characterstic count: %d", nativeCharacteristics.size()));
 
     for(BluetoothGattCharacteristic c : nativeCharacteristics) {
+      Log.i("", String.format("Characterstic: %s", c.getUuid().toString()));
+
       WritableArray properties = Arguments.createArray();
       int propertyBitmask = c.getProperties();
 
@@ -218,11 +236,40 @@ class RNBLEModule extends ReactContextBaseJavaModule {
     WritableMap params = Arguments.createMap();
     WritableMap advertisement = Arguments.createMap();
 
+    WritableArray serviceUuids = Arguments.createArray();
+
+    for(UUID uuid : device.getAdvertisedServices()) {
+      serviceUuids.pushString(toNobleUuid(uuid.toString()));
+    }
+
+    advertisement.putArray("serviceUuids", serviceUuids);
+
+    WritableArray serviceData = Arguments.createArray();
+    WritableMap serviceDataMap = Arguments.createMap();
+
+    Map<UUID,byte[]> serviceDataMapSource = device.getAdvertisedServiceData();
+
+    for (UUID uuid : device.getAdvertisedServices()) {
+      byte[] data = serviceDataMapSource.get(uuid);
+
+      if(uuid != null && data != null){
+        serviceDataMap.putString("uuid", toNobleUuid(uuid.toString()));
+        serviceDataMap.putString("data", Arrays.toString(data));
+        serviceData.pushMap(serviceDataMap);
+      }
+    }
+    advertisement.putArray("serviceData", serviceData);
+
     advertisement.putString("localName", device.getName_normalized());
+    advertisement.putInt("txPowerLevel", device.getTxPower());
+
     params.putMap("advertisement", advertisement);
 
     params.putInt("rssi", device.getRssi());
     params.putString("id", device.getMacAddress());
+    params.putString("address", device.getMacAddress());
+    params.putString("addressType", "unknown");
+    params.putBoolean("connectable", device.isConnectable());
 
     sendEvent("ble.discover", params);
   }
