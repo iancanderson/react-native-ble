@@ -45,6 +45,7 @@ import com.idevicesinc.sweetblue.BleManager.DiscoveryListener;
 import com.idevicesinc.sweetblue.BleManager;
 import com.idevicesinc.sweetblue.BleManagerConfig.ScanFilter;
 import com.idevicesinc.sweetblue.BleManagerState;
+import com.idevicesinc.sweetblue.DeviceStateListener;
 
 class RNBLEModule extends ReactContextBaseJavaModule {
   private Context context;
@@ -100,6 +101,26 @@ class RNBLEModule extends ReactContextBaseJavaModule {
     bleManager.startScan(scanFilter, discoveryListener);
   }
 
+  @ReactMethod
+  public void stopScanning() {
+    bleManager.stopScan();
+  }
+
+  @ReactMethod
+  public void connect(final String peripheralUuid) { //in android peripheralUuid is the mac address of the BLE device
+    BleDevice device = bleManager.getDevice(peripheralUuid);
+
+    device.connect(new BleDevice.StateListener() {
+      @Override public void onEvent(BleDevice.StateListener.StateEvent e) {
+        if (e.didEnter(BleDeviceState.CONNECTED)) {
+          WritableMap params = Arguments.createMap();
+          params.putString("peripheralUuid", e.macAddress());
+          sendEvent("ble.connect", params);
+        }
+      }
+    });
+  }
+
   private void sendDiscoveryEvent(BleDevice device) {
     WritableMap params = Arguments.createMap();
     WritableMap advertisement = Arguments.createMap();
@@ -108,6 +129,7 @@ class RNBLEModule extends ReactContextBaseJavaModule {
     params.putMap("advertisement", advertisement);
 
     params.putInt("rssi", device.getRssi());
+    params.putString("id", device.getMacAddress());
 
     sendEvent("ble.discover", params);
   }
