@@ -196,7 +196,17 @@ class RNBLEModule extends ReactContextBaseJavaModule {
     params.putString("peripheralUuid", peripheralUuid);
     params.putString("serviceUuid", toNobleUuid(serviceUuid));
     params.putArray("characteristics", requestedCharacteristics);
-    this.sendEvent("ble.characteristicsDiscover", params);
+    sendEvent("ble.characteristicsDiscover", params);
+  }
+
+  @ReactMethod
+  public void disconnect(final String peripheralUuid) {
+    BleDevice device = bleManager.getDevice(peripheralUuid);
+    device.disconnect();
+
+    WritableMap params = Arguments.createMap();
+    params.putString("peripheralUuid", peripheralUuid);
+    sendEvent("ble.disconnect.", params);
   }
 
   private String toNobleUuid(String uuid) {
