@@ -79,44 +79,37 @@ class RNBLEModule extends ReactContextBaseJavaModule {
 
   @ReactMethod
   public void startScanning(ReadableArray _serviceUuids, Boolean _allowDuplicates) {
-    final ScanFilter scanFilter = new ScanFilter()
-    {
-        @Override public Please onEvent(ScanEvent e)
-        {
-          Log.i("", String.format("BLEBLE Received ScanEvent: %s", e.name_normalized()));
-          return Please.acknowledgeIf(e.name_normalized().contains("axa"));
-        }
+    final ScanFilter scanFilter = new ScanFilter() {
+      @Override public Please onEvent(ScanEvent e) {
+        Log.i("", String.format("BLEBLE Received ScanEvent: %s", e.name_normalized()));
+        return Please.acknowledgeIf(e.name_normalized().contains("axa"));
+      }
     };
 
-    Log.i("", "BLEBLE startScanning");
-
-    final DiscoveryListener discoveryListener = new DiscoveryListener()
-    {
-      @Override public void onEvent(DiscoveryEvent e)
-      {
+    final DiscoveryListener discoveryListener = new DiscoveryListener() {
+      @Override public void onEvent(DiscoveryEvent e) {
         Log.i("", "BLEBLE Discovery event");
 
-        if( e.was(LifeCycle.DISCOVERED) )
-        {
-          // e.device().connect(new BleDevice.StateListener()
-          // {
-          //   @Override public void onEvent(StateEvent e)
-          //   {
-          //     if( e.didEnter(BleDeviceState.INITIALIZED) )
-          //     {
-          //       String name = e.device().getName_normalized();
-          //       Log.i("", String.format("BLEBLE DEVICE INITIALIZED: %s", name));
-          //     }
-          //   }
-          // });
+        if( e.was(LifeCycle.DISCOVERED) ) {
+          sendDiscoveryEvent(e.device());
         }
       }
     };
 
+    Log.i("", "BLEBLE startScanning");
     bleManager.startScan(scanFilter, discoveryListener);
+  }
 
-    //TODO - trigger this "for real"
-    // this.sendEvent("ble.discover", params);
+  private void sendDiscoveryEvent(BleDevice device) {
+    WritableMap params = Arguments.createMap();
+    WritableMap advertisement = Arguments.createMap();
+
+    advertisement.putString("localName", device.getName_normalized());
+    params.putMap("advertisement", advertisement);
+
+    params.putInt("rssi", device.getRssi());
+
+    sendEvent("ble.discover", params);
   }
 
   private void sendEvent(String eventName, WritableMap params) {
