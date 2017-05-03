@@ -35,6 +35,7 @@ import java.util.UUID;
 import android.bluetooth.BluetoothGattCharacteristic;
 import android.bluetooth.BluetoothGattService;
 import android.content.Context;
+import android.util.Base64;
 import android.util.Log;
 
 import com.facebook.react.bridge.Arguments;
@@ -233,6 +234,25 @@ class RNBLEModule extends ReactContextBaseJavaModule {
     params.putString("characteristicUuid", toNobleUuid(characteristicUuidString));
     params.putBoolean("state", notify);
     sendEvent("ble.notify", params);
+  }
+
+
+  @ReactMethod
+  public void write(String peripheralUuid, String serviceUuidString, String characteristicUuidString, String data, Boolean withoutResponse){
+    Log.d("RNBLE", "Writing to device");
+
+    UUID serviceUuid = UUID.fromString(serviceUuidString);
+    UUID characteristicUuid = UUID.fromString(characteristicUuidString);
+
+    BleDevice device = bleManager.getDevice(peripheralUuid);
+    byte[] byteArray = Base64.decode(data, Base64.DEFAULT);
+
+    if (withoutResponse) {
+      device.write(serviceUuid, characteristicUuid, byteArray);
+    } else {
+      //TODO - how to write with response??
+      device.write(serviceUuid, characteristicUuid, byteArray);
+    }
   }
 
   private String toNobleUuid(String uuid) {
