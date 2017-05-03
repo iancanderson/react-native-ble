@@ -10,10 +10,6 @@ android {
         versionCode 1
         versionName "1.0"
     }
-    sourceSets {
-      main.java.srcDirs += './lib/sweetblue/src'
-      main.res.srcDirs += './lib/sweetblue/res'
-    }
     buildTypes {
         release {
             minifyEnabled false
@@ -24,4 +20,5 @@ android {
 dependencies {
     compile 'com.android.support:appcompat-v7:23.1.0'
     compile 'com.facebook.react:react-native:0.14.+'
+    compile fileTree(dir: 'libs', include: '*.jar')
 }

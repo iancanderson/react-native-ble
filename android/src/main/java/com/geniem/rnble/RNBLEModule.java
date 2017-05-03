@@ -68,9 +68,6 @@ class RNBLEModule extends ReactContextBaseJavaModule {
   public void initialize() {
     super.initialize();
     this.bleManager = BleManager.get(this.context);
-
-    // TEMPORARY
-    bleManager.disconnectAll();
   }
 
   /**
