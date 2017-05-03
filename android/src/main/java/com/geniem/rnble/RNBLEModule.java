@@ -263,13 +263,39 @@ class RNBLEModule extends ReactContextBaseJavaModule {
             Log.d("RNBLE", "Sending write event");
             sendEvent("ble.write", params);
           } else {
-            Log.w("RNBLE", e.target().toString());
-            Log.w("RNBLE", e.charUuid().toString());
             Log.w("RNBLE", String.format("Write failed with status: %s", e.status().toString()));
           }
         }
       });
     }
+  }
+
+  @ReactMethod
+  public void read(final String peripheralUuid, final String serviceUuidString, final String characteristicUuidString) {
+    Log.d("RNBLE", "Reading from device");
+
+    UUID characteristicUuid = UUID.fromString(characteristicUuidString);
+
+    BleDevice device = bleManager.getDevice(peripheralUuid);
+    device.read(characteristicUuid, new BleDevice.ReadWriteListener() {
+      @Override public void onEvent(BleDevice.ReadWriteListener.ReadWriteEvent e) {
+        if (e.status() == BleDevice.ReadWriteListener.Status.SUCCESS) {
+          Log.d("RNBLE", "Read succeeded");
+          WritableMap params = Arguments.createMap();
+
+          params.putString("peripheralUuid", peripheralUuid);
+          params.putString("serviceUuid", toNobleUuid(serviceUuidString));
+          params.putString("characteristicUuid", toNobleUuid(characteristicUuidString));
+          params.putString("data", Arrays.toString(e.data()));
+          params.putBoolean("isNotification", false);
+
+          Log.d("RNBLE", "Sending read event to JS");
+          sendEvent("ble.data", params);
+        } else {
+          Log.w("RNBLE", String.format("Write failed with status: %s", e.status().toString()));
+        }
+      }
+    });
   }
 
   private String toNobleUuid(String uuid) {
