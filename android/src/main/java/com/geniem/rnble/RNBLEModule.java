@@ -92,14 +92,13 @@ class RNBLEModule extends ReactContextBaseJavaModule {
   public void startScanning(ReadableArray _serviceUuids, Boolean _allowDuplicates) {
     final ScanFilter scanFilter = new ScanFilter() {
       @Override public Please onEvent(ScanEvent e) {
-        Log.i("", String.format("BLEBLE Received ScanEvent: %s", e.name_normalized()));
         return Please.acknowledgeIf(e.name_normalized().contains("axa"));
       }
     };
 
     final DiscoveryListener discoveryListener = new DiscoveryListener() {
       @Override public void onEvent(DiscoveryEvent e) {
-        Log.i("", "BLEBLE Discovery event");
+        Log.d("RNBLE", "Discovery event");
 
         if( e.was(LifeCycle.DISCOVERED) ) {
           sendDiscoveryEvent(e.device());
@@ -107,7 +106,7 @@ class RNBLEModule extends ReactContextBaseJavaModule {
       }
     };
 
-    Log.i("", "BLEBLE startScanning");
+    Log.d("RNBLE", "startScanning");
     bleManager.startScan(scanFilter, discoveryListener);
   }
 
@@ -127,46 +126,35 @@ class RNBLEModule extends ReactContextBaseJavaModule {
           params.putString("peripheralUuid", e.macAddress());
           sendEvent("ble.connect", params);
         }
+        if (e.didEnter(BleDeviceState.DISCOVERING_SERVICES)) {
+          Log.d("RNBLE", "DISCOVERING_SERVICES");
+        }
+        if (e.didEnter(BleDeviceState.SERVICES_DISCOVERED)) {
+          Log.d("RNBLE", "SERVICES_DISCOVERED");
+          sendServicesDiscoverEvent(e.device(), e.macAddress());
+        }
       }
     });
   }
 
 
   @ReactMethod
-  public void discoverServices(final String peripheralUuid, ReadableArray _uuids){
-    Log.i("", "BLEBLE discoverServices");
-
-    BleDevice device = bleManager.getDevice(peripheralUuid);
-    WritableArray serviceUuids = Arguments.createArray();
-
-    Log.i("", "BLEBLE Looping over BluetoothGattService");
-
-    for(BluetoothGattService service : device.getNativeServices_List()){
-      String uuid = service.getUuid().toString();
-      serviceUuids.pushString(toNobleUuid(uuid));
-    }
-
-    WritableMap params = Arguments.createMap();
-    params.putString("peripheralUuid", peripheralUuid);
-    params.putArray("serviceUuids", serviceUuids);
-
-    Log.i("", "BLEBLE Sending servicesDiscover");
-
-    this.sendEvent("ble.servicesDiscover", params);
+  public void discoverServices(final String _peripheralUuid, ReadableArray _uuids){
+    Log.d("RNBLE", "discoverServices is a no-op - service discovery happens after connecting");
   }
 
   @ReactMethod
   public void discoverCharacteristics(final String peripheralUuid, final String serviceUuid, ReadableArray _characteristicUuids){
-    Log.i("", "BLEBLE discoverCharacteristics");
+    Log.d("RNBLE", "discoverCharacteristics");
 
     BleDevice device = bleManager.getDevice(peripheralUuid);
     WritableArray requestedCharacteristics = Arguments.createArray();
 
     List<BluetoothGattCharacteristic> nativeCharacteristics = device.getNativeCharacteristics_List();
-    Log.i("", String.format("Characterstic count: %d", nativeCharacteristics.size()));
+    Log.d("RNBLE", String.format("Characterstic count: %d", nativeCharacteristics.size()));
 
     for(BluetoothGattCharacteristic c : nativeCharacteristics) {
-      Log.i("", String.format("Characterstic: %s", c.getUuid().toString()));
+      Log.d("RNBLE", String.format("Characterstic: %s", c.getUuid().toString()));
 
       WritableArray properties = Arguments.createArray();
       int propertyBitmask = c.getProperties();
@@ -272,6 +260,26 @@ class RNBLEModule extends ReactContextBaseJavaModule {
     params.putBoolean("connectable", device.isConnectable());
 
     sendEvent("ble.discover", params);
+  }
+
+  private void sendServicesDiscoverEvent(BleDevice device, String peripheralUuid) {
+    WritableArray serviceUuids = Arguments.createArray();
+
+    int servicesSize = device.getNativeServices_List().size();
+    Log.d("RNBLE", String.format("Looping over BluetoothGattService: %d", servicesSize));
+
+    for(BluetoothGattService service : device.getNativeServices_List()){
+      String uuid = service.getUuid().toString();
+      serviceUuids.pushString(toNobleUuid(uuid));
+    }
+
+    WritableMap params = Arguments.createMap();
+    params.putString("peripheralUuid", peripheralUuid);
+    params.putArray("serviceUuids", serviceUuids);
+
+    Log.d("RNBLE", "Sending servicesDiscover");
+
+    sendEvent("ble.servicesDiscover", params);
   }
 
   private void sendEvent(String eventName, WritableMap params) {
