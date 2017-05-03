@@ -238,7 +238,7 @@ class RNBLEModule extends ReactContextBaseJavaModule {
 
 
   @ReactMethod
-  public void write(String peripheralUuid, String serviceUuidString, String characteristicUuidString, String data, Boolean withoutResponse){
+  public void write(final String peripheralUuid, final String serviceUuidString, final String characteristicUuidString, String data, Boolean withoutResponse){
     Log.d("RNBLE", "Writing to device");
 
     UUID serviceUuid = UUID.fromString(serviceUuidString);
@@ -248,10 +248,27 @@ class RNBLEModule extends ReactContextBaseJavaModule {
     byte[] byteArray = Base64.decode(data, Base64.DEFAULT);
 
     if (withoutResponse) {
-      device.write(serviceUuid, characteristicUuid, byteArray);
+      device.write(characteristicUuid, byteArray);
     } else {
-      //TODO - how to write with response??
-      device.write(serviceUuid, characteristicUuid, byteArray);
+      device.write(characteristicUuid, byteArray, new BleDevice.ReadWriteListener() {
+        @Override public void onEvent(BleDevice.ReadWriteListener.ReadWriteEvent e) {
+          if (e.status() == BleDevice.ReadWriteListener.Status.SUCCESS) {
+            Log.d("RNBLE", "Write succeeded");
+            WritableMap params = Arguments.createMap();
+
+            params.putString("peripheralUuid", peripheralUuid);
+            params.putString("serviceUuid", toNobleUuid(serviceUuidString));
+            params.putString("characteristicUuid", toNobleUuid(characteristicUuidString));
+
+            Log.d("RNBLE", "Sending write event");
+            sendEvent("ble.write", params);
+          } else {
+            Log.w("RNBLE", e.target().toString());
+            Log.w("RNBLE", e.charUuid().toString());
+            Log.w("RNBLE", String.format("Write failed with status: %s", e.status().toString()));
+          }
+        }
+      });
     }
   }
 
