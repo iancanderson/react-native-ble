@@ -215,6 +215,26 @@ class RNBLEModule extends ReactContextBaseJavaModule {
     sendEvent("ble.disconnect.", params);
   }
 
+  @ReactMethod
+  public void notify(String peripheralUuid, String serviceUuidString, String characteristicUuidString, Boolean notify){
+    UUID serviceUuid = UUID.fromString(serviceUuidString);
+    UUID characteristicUuid = UUID.fromString(characteristicUuidString);
+
+    BleDevice device = bleManager.getDevice(peripheralUuid);
+    if (notify) {
+      device.enableNotify(serviceUuid, characteristicUuid);
+    } else {
+      device.disableNotify(serviceUuid, characteristicUuid);
+    }
+
+    WritableMap params = Arguments.createMap();
+    params.putString("peripheralUuid", peripheralUuid);
+    params.putString("serviceUuid", toNobleUuid(serviceUuidString));
+    params.putString("characteristicUuid", toNobleUuid(characteristicUuidString));
+    params.putBoolean("state", notify);
+    sendEvent("ble.notify", params);
+  }
+
   private String toNobleUuid(String uuid) {
     String result = uuid.replaceAll("[\\s\\-()]", "");
     return result.toLowerCase();
