@@ -217,15 +217,34 @@ class RNBLEModule extends ReactContextBaseJavaModule {
   }
 
   @ReactMethod
-  public void notify(String peripheralUuid, String serviceUuidString, String characteristicUuidString, Boolean notify){
+  public void notify(final String peripheralUuid, final String serviceUuidString, final String characteristicUuidString, Boolean notify){
     UUID serviceUuid = UUID.fromString(serviceUuidString);
     UUID characteristicUuid = UUID.fromString(characteristicUuidString);
 
     BleDevice device = bleManager.getDevice(peripheralUuid);
     if (notify) {
-      device.enableNotify(serviceUuid, characteristicUuid);
+      Log.d("RNBLE", "Enabling notifications");
+
+      device.enableNotify(characteristicUuid, new BleDevice.ReadWriteListener() {
+        @Override public void onEvent(BleDevice.ReadWriteListener.ReadWriteEvent e) {
+          if (e.status() == BleDevice.ReadWriteListener.Status.SUCCESS) {
+            Log.d("RNBLE", "Read notification succeeded");
+
+            sendDataEvent(
+              peripheralUuid,
+              serviceUuidString,
+              characteristicUuidString,
+              e.data(),
+              true
+            );
+          } else {
+            Log.w("RNBLE", String.format("Write failed with status: %s", e.status().toString()));
+          }
+        }
+      });
     } else {
-      device.disableNotify(serviceUuid, characteristicUuid);
+      Log.d("RNBLE", "Disabling notififcations");
+      device.disableNotify(characteristicUuid);
     }
 
     WritableMap params = Arguments.createMap();
@@ -236,6 +255,18 @@ class RNBLEModule extends ReactContextBaseJavaModule {
     sendEvent("ble.notify", params);
   }
 
+  private void sendDataEvent(String peripheralUuid, String serviceUuidString, String characteristicUuidString, byte[] data, boolean isNotification) {
+    WritableMap params = Arguments.createMap();
+
+    params.putString("peripheralUuid", peripheralUuid);
+    params.putString("serviceUuid", toNobleUuid(serviceUuidString));
+    params.putString("characteristicUuid", toNobleUuid(characteristicUuidString));
+    params.putString("data", Arrays.toString(data));
+    params.putBoolean("isNotification", isNotification);
+
+    Log.d("RNBLE", "Sending data event to JS");
+    sendEvent("ble.data", params);
+  }
 
   @ReactMethod
   public void write(final String peripheralUuid, final String serviceUuidString, final String characteristicUuidString, String data, Boolean withoutResponse){
@@ -281,16 +312,14 @@ class RNBLEModule extends ReactContextBaseJavaModule {
       @Override public void onEvent(BleDevice.ReadWriteListener.ReadWriteEvent e) {
         if (e.status() == BleDevice.ReadWriteListener.Status.SUCCESS) {
           Log.d("RNBLE", "Read succeeded");
-          WritableMap params = Arguments.createMap();
 
-          params.putString("peripheralUuid", peripheralUuid);
-          params.putString("serviceUuid", toNobleUuid(serviceUuidString));
-          params.putString("characteristicUuid", toNobleUuid(characteristicUuidString));
-          params.putString("data", Arrays.toString(e.data()));
-          params.putBoolean("isNotification", false);
-
-          Log.d("RNBLE", "Sending read event to JS");
-          sendEvent("ble.data", params);
+          sendDataEvent(
+            peripheralUuid,
+            serviceUuidString,
+            characteristicUuidString,
+            e.data(),
+            false
+          );
         } else {
           Log.w("RNBLE", String.format("Write failed with status: %s", e.status().toString()));
         }
