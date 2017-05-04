@@ -65,6 +65,7 @@ class RNBLEModule extends ReactContextBaseJavaModule implements LifecycleEventLi
   public RNBLEModule(ReactApplicationContext reactContext) {
     super(reactContext);
     context = reactContext;
+    reactContext.addLifecycleEventListener(this);
   }
 
   @Override
