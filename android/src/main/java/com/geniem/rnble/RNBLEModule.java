@@ -72,7 +72,6 @@ class RNBLEModule extends ReactContextBaseJavaModule implements LifecycleEventLi
     super.initialize();
     BleManagerConfig managerConfig = new BleManagerConfig();
     managerConfig.allowDuplicatePollEntries = true;
-    managerConfig.cacheDeviceOnUndiscovery = false;
 
     bleManager = BleManager.get(this.context, managerConfig);
     bleManager.setListener_State(new BleManager.StateListener() {
