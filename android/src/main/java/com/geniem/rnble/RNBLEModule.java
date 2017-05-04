@@ -76,9 +76,11 @@ class RNBLEModule extends ReactContextBaseJavaModule implements LifecycleEventLi
     bleManager = BleManager.get(this.context, managerConfig);
     bleManager.setListener_State(new BleManager.StateListener() {
       @Override public void onEvent(BleManager.StateListener.StateEvent e) {
-        WritableMap params = Arguments.createMap();
-        params.putString("state", getStringState());
-        sendEvent("ble.stateChange", params);
+        boolean didEnterTrackedState = e.didEnterAny(BleManagerState.ON, BleManagerState.OFF, BleManagerState.TURNING_OFF, BleManagerState.TURNING_ON);
+
+        if (didEnterTrackedState) {
+          sendStateChangeEvent();
+        }
       }
     });
   }
@@ -94,9 +96,7 @@ class RNBLEModule extends ReactContextBaseJavaModule implements LifecycleEventLi
 
   @ReactMethod
   public void getState() {
-    WritableMap params = Arguments.createMap();
-    params.putString("state", getStringState());
-    sendEvent("ble.stateChange", params);
+    sendStateChangeEvent();
   }
 
   @ReactMethod
@@ -409,6 +409,12 @@ class RNBLEModule extends ReactContextBaseJavaModule implements LifecycleEventLi
     Log.d("RNBLE", "Sending servicesDiscover");
 
     sendEvent("ble.servicesDiscover", params);
+  }
+
+  private void sendStateChangeEvent() {
+    WritableMap params = Arguments.createMap();
+    params.putString("state", getStringState());
+    sendEvent("ble.stateChange", params);
   }
 
   private void sendEvent(String eventName, WritableMap params) {
