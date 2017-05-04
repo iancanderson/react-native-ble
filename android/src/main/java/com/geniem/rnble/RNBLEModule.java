@@ -398,7 +398,9 @@ class RNBLEModule extends ReactContextBaseJavaModule {
   }
 
   private String getStringState() {
-    if (bleManager.isAny(BleManagerState.OFF)) {
+    if (!bleManager.isBleSupported) {
+      return "unsupported";
+    } else if (bleManager.isAny(BleManagerState.OFF)) {
       return "poweredOff";
     } else if (bleManager.isAny(BleManagerState.TURNING_OFF)) {
       return "turningOff";
