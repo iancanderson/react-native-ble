@@ -46,18 +46,21 @@ import com.facebook.react.bridge.ReadableArray;
 import com.facebook.react.bridge.WritableArray;
 import com.facebook.react.bridge.WritableMap;
 import com.facebook.react.modules.core.DeviceEventManagerModule;
+import com.facebook.react.bridge.LifecycleEventListener;
 
 import com.idevicesinc.sweetblue.BleDevice;
 import com.idevicesinc.sweetblue.BleDeviceState;
 import com.idevicesinc.sweetblue.BleManager.DiscoveryListener;
 import com.idevicesinc.sweetblue.BleManager;
 import com.idevicesinc.sweetblue.BleManagerConfig.ScanFilter;
+import com.idevicesinc.sweetblue.BleManagerConfig;
 import com.idevicesinc.sweetblue.BleManagerState;
 import com.idevicesinc.sweetblue.DeviceStateListener;
 
-class RNBLEModule extends ReactContextBaseJavaModule {
+class RNBLEModule extends ReactContextBaseJavaModule implements LifecycleEventListener {
   private Context context;
   private BleManager bleManager;
+  private static final String TAG = "RNBLE";
 
   public RNBLEModule(ReactApplicationContext reactContext) {
     super(reactContext);
@@ -67,7 +70,11 @@ class RNBLEModule extends ReactContextBaseJavaModule {
   @Override
   public void initialize() {
     super.initialize();
-    bleManager = BleManager.get(this.context);
+    BleManagerConfig managerConfig = new BleManagerConfig();
+    managerConfig.allowDuplicatePollEntries = true;
+    managerConfig.cacheDeviceOnUndiscovery = false;
+
+    bleManager = BleManager.get(this.context, managerConfig);
     bleManager.setListener_State(new BleManager.StateListener() {
       @Override public void onEvent(BleManager.StateListener.StateEvent e) {
         WritableMap params = Arguments.createMap();
@@ -105,7 +112,7 @@ class RNBLEModule extends ReactContextBaseJavaModule {
       @Override public void onEvent(DiscoveryEvent e) {
         Log.d("RNBLE", "Discovery event");
 
-        if( e.was(LifeCycle.DISCOVERED) ) {
+        if( e.was(LifeCycle.DISCOVERED) || e.was(LifeCycle.REDISCOVERED) ) {
           sendDiscoveryEvent(e.device());
         }
       }
@@ -130,6 +137,12 @@ class RNBLEModule extends ReactContextBaseJavaModule {
           WritableMap params = Arguments.createMap();
           params.putString("peripheralUuid", e.macAddress());
           sendEvent("ble.connect", params);
+        }
+
+        if (e.didEnter(BleDeviceState.DISCONNECTED)) {
+          WritableMap params = Arguments.createMap();
+          params.putString("peripheralUuid", e.macAddress());
+          sendEvent("ble.disconnect", params);
         }
         if (e.didEnter(BleDeviceState.DISCOVERING_SERVICES)) {
           Log.d("RNBLE", "DISCOVERING_SERVICES");
@@ -212,6 +225,7 @@ class RNBLEModule extends ReactContextBaseJavaModule {
 
   @ReactMethod
   public void disconnect(final String peripheralUuid) {
+    Log.d(TAG, "disconnecting from device");
     BleDevice device = bleManager.getDevice(peripheralUuid);
     device.disconnect();
 
@@ -418,6 +432,23 @@ class RNBLEModule extends ReactContextBaseJavaModule {
     } else {
       return "unknown";
     }
+  }
+
+  @Override
+  public void onHostResume() {
+    Log.d(TAG, "onHostResume");
+  }
+
+  @Override
+  public void onHostPause() {
+    Log.v(TAG, "onHostPause");
+    bleManager.disconnectAll();
+  }
+
+  @Override
+  public void onHostDestroy() {
+    Log.v(TAG, "onHostDestroy");
+    bleManager.disconnectAll();
   }
 }
 
