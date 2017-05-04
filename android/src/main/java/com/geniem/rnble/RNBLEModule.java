@@ -108,6 +108,12 @@ class RNBLEModule extends ReactContextBaseJavaModule implements LifecycleEventLi
       }
     };
 
+    for (BleDevice device : bleManager.getDevices_List()) {
+      Log.d(TAG, "EXISTING DEVICE");
+
+      sendDiscoveryEvent(device);
+    }
+
     final DiscoveryListener discoveryListener = new DiscoveryListener() {
       @Override public void onEvent(DiscoveryEvent e) {
         Log.d("RNBLE", "Discovery event");
