@@ -61,13 +61,20 @@ class RNBLEModule extends ReactContextBaseJavaModule {
 
   public RNBLEModule(ReactApplicationContext reactContext) {
     super(reactContext);
-    this.context = reactContext;
+    context = reactContext;
   }
 
   @Override
   public void initialize() {
     super.initialize();
-    this.bleManager = BleManager.get(this.context);
+    bleManager = BleManager.get(this.context);
+    bleManager.setListener_State(new BleManager.StateListener() {
+      @Override public void onEvent(BleManager.StateListener.StateEvent e) {
+        WritableMap params = Arguments.createMap();
+        params.putString("state", getStringState());
+        sendEvent("ble.stateChange", params);
+      }
+    });
   }
 
   /**
@@ -398,7 +405,7 @@ class RNBLEModule extends ReactContextBaseJavaModule {
   }
 
   private String getStringState() {
-    if (!bleManager.isBleSupported) {
+    if (!bleManager.isBleSupported()) {
       return "unsupported";
     } else if (bleManager.isAny(BleManagerState.OFF)) {
       return "poweredOff";
